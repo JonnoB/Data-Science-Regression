@@ -133,7 +133,18 @@ mod.inf$coeff[i] <- nrow(eval(parse(text = x)))-1
 }
 ```
 
+after exploring and reclassing the data an intitial look at the difference between the mean mpg for Automatic and manual vehicles was performed, this showed adifference betwee the means of `r ttest$estimate[1]-ttest$estimate[2]` mpg with a t-test returning a p-value of `r round(ttest$p.value,4)` meaning the null hypothesis was rejected at the 0.05 confidence level and that the manual cars get more miles per gallon of travel. A bar plot of this result can be seen in the appendix
 
+However the above result does not control for the other variables in the dataset, in order to provide a more meaningful measure of the difference between the two types of car multiple linear regression modelling was performed looking at several different model structures. As there were many variables backwards stepwise regression was performed in order to select the variables to be used in the model. R uses the AIC value when performing a stepwise regression.
+
+The different models investigated where as follows
+1 modal 0     : `r mod0$call`
+1 modal 0 step:`r mod0step$call` 
+2 modal 1     :`r mod1$call`
+3 modal 1 step`r mod1step$call`
+4 modal 2     :`r mod1$call`
+
+After the final modal was selected based on it's total adjusted R squared value and the ease of interpreting the coefficients.
 
 ```{r, results ='asis'}
 xtable(mod.inf, type = "html")
