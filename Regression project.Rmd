@@ -1,0 +1,186 @@
+---
+
+title: "Regression Analysis Coursework"
+
+author: "Jonathan Bourne"
+
+date: "Saturday, October 25, 2014"
+
+output: html_document
+
+---
+
+```{r}
+pkgTest <- function(x)
+  {
+    if (!require(x,character.only = TRUE))
+    {
+      install.packages(x,dep=TRUE)
+        if(!require(x,character.only = TRUE)) stop("Package not found")
+    }
+  }
+
+```
+
+
+```{r}
+base <- getwd()
+
+# setwd("G:/R/Functions")
+# 
+# source("pkgTest.R")
+# 
+# packages <- c("ggplot2", "xtable")
+# 
+# for (i in 1:length(packages)){
+# pkgTest(packages[i])}
+
+ library(ggplot2);library(xtable)
+
+```
+
+ 
+```{r}
+
+##function from http://stackoverflow.com/questions/4357031/qqnorm-and-qqline-in-ggplot2
+ggQQ <- function(LM) # argument: a linear model
+{
+    y <- quantile(LM$resid[!is.na(LM$resid)], c(0.25, 0.75))
+    x <- qnorm(c(0.25, 0.75))
+    slope <- diff(y)/diff(x)
+    int <- y[1L] - slope * x[1L]
+    p <- ggplot(LM, aes(sample=.resid)) +
+        stat_qq(alpha = 0.5) +
+        geom_abline(slope = slope, intercept = int, color="blue")
+
+    return(p)
+}
+```
+
+
+#Exectutive Summary
+Source code is available on gitHub
+
+#Introduction
+You work for Motor Trend, a magazine about the automobile industry. Looking at a data set of a collection of cars, they are interested in exploring the relationship between a set of variables and miles per gallon (MPG) (outcome). They are particularly interested in the following two questions:
+
+"Is an automatic or manual transmission better for MPG"
+"Quantify the MPG difference between automatic and manual transmissions"
+
+
+```{r}
+data(mtcars)
+
+summary(mtcars)
+
+data <- mtcars
+
+factors <- c("am", "vs", "cyl", "gear", "carb")
+
+x <- match(factors, names(data))
+
+data[,x] <- as.data.frame(lapply(data[,x], as.factor))
+```
+
+#Data gathering and exploration
+The data set comes from R datasets it includes `r nrow(mtcars)` observations and ´r length(mtcars)´ variables. No observations were removed from the data set. The follwing variables were converted from numeric to factor variables `r paste(factors, collapse = ", ")`, no transformations were performed on the data set no new variables were created. A plot showing the relationship between all variables can be found in the appendix 
+
+##Analysis
+
+
+```{r}
+ttest <- t.test(data$mpg[data$am ==1],data$mpg[data$am ==0]) ## this label to graph showing statistically significant difference
+```
+
+
+```{r}
+
+mod0 <- lm(mpg~.,data) 
+mod0step <- step(mod0, direction = "backward")
+mod0step <- eval(mod0step$call)
+
+string <- paste("mpg~am*(",(paste(names(data[,-1]), collapse ="+")),")", sep="")
+
+mod1 <- lm(string, data)
+mod1step <- step(mod1, direction = "backward")
+mod1step <- eval(mod1step$call)
+
+mod2 <- lm(mpg~am, data)
+
+coef(summary(mod1))["am1","Estimate"]
+
+##the inclusion of drat switches the sign of the am variable
+
+mod.inf <- data.frame(modals = c("mod0", "mod0step", "mod1", "mod1step", "mod2"), norm.test = rep(0,5), adj.r.squares =rep(0,5), coeff = rep(0,5) )
+
+modals<- c("mod0", "mod0step", "mod1", "mod1step", "mod2")
+norm.test<-NULL
+for (i in 1:nrow(mod.inf)){
+x<- paste(mod.inf$modals[i],"$residuals", sep="")  
+mod.inf$norm.test[i] <- shapiro.test(eval(parse(text = x)))[2]
+}
+
+adj.r.squares<-NULL
+for (i in 1:nrow(mod.inf)){
+x<- paste("summary(", mod.inf$modals[i],")","$adj.r.squared", sep="")  
+mod.inf$adj.r.squares[i] <- eval(parse(text = x))
+}
+
+coeffs<-NULL
+for (i in 1:nrow(mod.inf)){
+x<- paste("summary(", mod.inf$modals[i],")","$coefficients", sep="")  
+mod.inf$coeff[i] <- nrow(eval(parse(text = x)))-1
+}
+```
+
+
+
+```{r, results ='asis'}
+xtable(mod.inf, type = "html")
+```
+
+The above table of the diagnostics of the `r nrow(mod.inf)` modals generated, has the folling columns
+
+- modals: The modal identifier
+- norm.test: The results of the shapiroWilk test on the normality of the residuals of that modal, values larger than 0.05 can be considered normal
+- adj.r.squares: The adjusted R squared of the model
+- coeff: the number of coefficients included in the modal
+
+Reviewing the modals, mod2 can be rejected as it is essentially the same as the two means that were explored at the beginning of this document. Although the Mod1 varients have extremly high $R^2$ values due to the interaction terms, these interaction terms make interpreting the model more difficult. To add to this although the modals overall have a very high $R^2$ the $R^2$ of the actual coefficients are often very low adding to the confusion of interpreting the results.
+It is possible to do a montecarlo analysis on the Automatic/Manual variable but this needs to be carefullt controlled otherwise unrealistic results can be obtained (see appendix for an example)
+Due to these considerations the Modal "Mod0step" was chosen to be used in the final evaluation.
+
+##Results
+
+```{r, results='asis'}
+xtable(mod0step$coefficients, type= "html")
+```
+
+
+
+#Conclusions
+
+
+
+
+##location of source code
+This document has been compiled as a PDF using Knitr and \Latex the source code can be found on github here
+
+#Appendix
+
+```{r}
+plot(data[,1:11], main ="Plot showing the relationship between all variables")
+```
+
+
+```{r}
+ggplot(data, aes(x = am, y= mpg, fill = am) ) + geom_boxplot()+ggtitle("Comparing the means and distributions between \nAutomatic and non-Automatic cars")+ xlab(" ")
+```
+
+
+```{r}
+data2 <- as.data.frame(lapply(data, sample, 10000, replace = TRUE))
+pred <- predict(mod1step, data2)
+plot(density(pred), main = "Results of monte carlo analysis\n of mod1step with 10K repititions", xlab = "mpg\n Values are clearly not realistic")
+```
+
