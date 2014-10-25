@@ -59,7 +59,7 @@ ggQQ <- function(LM) # argument: a linear model
 
 
 #Exectutive Summary
-Source code is available on gitHub
+Source code is available on gitHub[https://github.com/JonnoB/Data-Science-Regression]
 
 #Introduction
 You work for Motor Trend, a magazine about the automobile industry. Looking at a data set of a collection of cars, they are interested in exploring the relationship between a set of variables and miles per gallon (MPG) (outcome). They are particularly interested in the following two questions:
@@ -175,7 +175,7 @@ xtable(mod0step$coefficients, type= "html")
 
 
 ##location of source code
-This document has been compiled as a PDF using Knitr and \Latex the source code can be found on github here
+This document has been compiled as a PDF using Knitr and Latex the source code can be found on github here[https://github.com/JonnoB/Data-Science-Regression]
 
 #Appendix
 
