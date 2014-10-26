@@ -1,14 +1,14 @@
 ---
-
 title: "Regression Analysis Coursework"
-
 author: "Jonathan Bourne"
-
 date: "Saturday, October 25, 2014"
-
 output: html_document
-
 ---
+
+```{r, echo=FALSE}
+library(knitr) 
+opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
+```
 
 ```{r}
 pkgTest <- function(x)
@@ -70,22 +70,38 @@ You work for Motor Trend, a magazine about the automobile industry. Looking at a
 
 ```{r}
 data(mtcars)
-
-summary(mtcars)
-
 data <- mtcars
-
 factors <- c("am", "vs", "cyl", "gear", "carb")
-
 x <- match(factors, names(data))
-
 data[,x] <- as.data.frame(lapply(data[,x], as.factor))
+pub.type <- "html"
 ```
 
 #Data gathering and exploration
-The data set comes from R datasets it includes `r nrow(mtcars)` observations and ´r length(mtcars)´ variables. No observations were removed from the data set. The follwing variables were converted from numeric to factor variables `r paste(factors, collapse = ", ")`, no transformations were performed on the data set no new variables were created. A plot showing the relationship between all variables can be found in the appendix 
+The data set comes from R datasets it includes `r nrow(mtcars)` observations and `r length(mtcars)` variables. No observations were removed from the data set. The follwing variables were converted from numeric to factor variables `r paste(factors, collapse = ", ")`, no transformations were performed on the data set no new variables were created. A plot showing the relationship between all variables can be found in the appendix 
+
+```{r}
+P.values = t(as.data.frame(c(shapiro.test((data$mpg))[2],shapiro.test((data$mpg[data$am == 1]))[2],shapiro.test((data$mpg[data$am == 0]))[2])))
+mpg.norm <- as.data.frame(cbind(Type = c("All Cars", "Manual", "Automatic"), P.values = round(P.values, 4))); rownames(mpg.norm) <-NULL
+```
+
+
+```{r, results='asis'}
+print(xtable(mpg.norm), type= pub.type)
+```
+
+The above table shows that the results of the Shapiro Wilks test which suggest that the distribution of the mpg is reasonably normal. this can be shown visually in the below graph
+
+```{r}
+ggplot(mtcars, aes(x = (mpg), fill = factor(am), group = am) )+geom_density(alpha = 0.5)+ggtitle("Distribution of mpg by car type" )
+```
+
 
 ##Analysis
+
+```{r}
+summary(mtcars)
+```
 
 
 ```{r}
@@ -96,18 +112,18 @@ ttest <- t.test(data$mpg[data$am ==1],data$mpg[data$am ==0]) ## this label to gr
 ```{r}
 
 mod0 <- lm(mpg~.,data) 
-mod0step <- step(mod0, direction = "backward")
+mod0step <- step(mod0, direction = "backward", trace = 0)
 mod0step <- eval(mod0step$call)
 
 string <- paste("mpg~am*(",(paste(names(data[,-1]), collapse ="+")),")", sep="")
 
 mod1 <- lm(string, data)
-mod1step <- step(mod1, direction = "backward")
+mod1step <- step(mod1, direction = "backward", trace = 0)
 mod1step <- eval(mod1step$call)
 
 mod2 <- lm(mpg~am, data)
 
-coef(summary(mod1))["am1","Estimate"]
+#coef(summary(mod1))["am1","Estimate"]
 
 ##the inclusion of drat switches the sign of the am variable
 
@@ -133,21 +149,32 @@ mod.inf$coeff[i] <- nrow(eval(parse(text = x)))-1
 }
 ```
 
-after exploring and reclassing the data an intitial look at the difference between the mean mpg for Automatic and manual vehicles was performed, this showed adifference betwee the means of `r ttest$estimate[1]-ttest$estimate[2]` mpg with a t-test returning a p-value of `r round(ttest$p.value,4)` meaning the null hypothesis was rejected at the 0.05 confidence level and that the manual cars get more miles per gallon of travel. A bar plot of this result can be seen in the appendix
+after exploring and reclassing the data an intitial look at the difference between the mean mpg for Automatic and manual vehicles was performed, this showed adifference between the means of `r ttest$estimate[1]-ttest$estimate[2]` mpg with a t-test returning a p-value of `r round(ttest$p.value,4)` meaning the null hypothesis was rejected at the 0.05 confidence level and that the manual cars get more miles per gallon of travel. A bar plot of this result can be seen in the appendix
 
 However the above result does not control for the other variables in the dataset, in order to provide a more meaningful measure of the difference between the two types of car multiple linear regression modelling was performed looking at several different model structures. As there were many variables backwards stepwise regression was performed in order to select the variables to be used in the model. R uses the AIC value when performing a stepwise regression.
 
+```{r}
+equationaliser <- function(x){
+modif <- gsub("\\d", "", names(x$coefficients)[-1])
+modif <- unique(modif, fromLast=T)
+modif <- modif[order(modif, decreasing = FALSE)]
+paste("mpg = ",(paste(c(paste(modif, collapse="+"),"Intercept"),collapse="+")),sep="")
+}
+```
+
+
 The different models investigated where as follows
-1 modal 0     : `r mod0$call`
-1 modal 0 step:`r mod0step$call` 
-2 modal 1     :`r mod1$call`
-3 modal 1 step`r mod1step$call`
-4 modal 2     :`r mod1$call`
+
+- modal 0     : `r equationaliser(mod0)`
+- modal 0 step: `r equationaliser(mod0step)`
+- modal 1     : `r equationaliser(mod1)`
+- modal 1 step : `r equationaliser(mod1step)`
+- modal 2     : `r equationaliser(mod2)`
 
 After the final modal was selected based on it's total adjusted R squared value and the ease of interpreting the coefficients.
 
 ```{r, results ='asis'}
-xtable(mod.inf, type = "html")
+print(xtable(mod.inf), type = pub.type)
 ```
 
 The above table of the diagnostics of the `r nrow(mod.inf)` modals generated, has the folling columns
@@ -157,6 +184,7 @@ The above table of the diagnostics of the `r nrow(mod.inf)` modals generated, ha
 - adj.r.squares: The adjusted R squared of the model
 - coeff: the number of coefficients included in the modal
 
+
 Reviewing the modals, mod2 can be rejected as it is essentially the same as the two means that were explored at the beginning of this document. Although the Mod1 varients have extremly high $R^2$ values due to the interaction terms, these interaction terms make interpreting the model more difficult. To add to this although the modals overall have a very high $R^2$ the $R^2$ of the actual coefficients are often very low adding to the confusion of interpreting the results.
 It is possible to do a montecarlo analysis on the Automatic/Manual variable but this needs to be carefullt controlled otherwise unrealistic results can be obtained (see appendix for an example)
 Due to these considerations the Modal "Mod0step" was chosen to be used in the final evaluation.
@@ -164,7 +192,7 @@ Due to these considerations the Modal "Mod0step" was chosen to be used in the fi
 ##Results
 
 ```{r, results='asis'}
-xtable(mod0step$coefficients, type= "html")
+print(xtable(as.data.frame(mod0step$coefficients)), type= pub.type)
 ```
 
 
@@ -175,7 +203,7 @@ xtable(mod0step$coefficients, type= "html")
 
 
 ##location of source code
-This document has been compiled as a PDF using Knitr and Latex the source code can be found on github here[https://github.com/JonnoB/Data-Science-Regression]
+This document has been compiled as a PDF using Knitr and  \(\LaTeX\) the source code can be found on github here[https://github.com/JonnoB/Data-Science-Regression]
 
 #Appendix
 
