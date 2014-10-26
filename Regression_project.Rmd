@@ -56,7 +56,7 @@ ggQQ <- function(LM) # argument: a linear model
 }
 ```
 #Exectutive Summary
-The report reviews 5 different models and selects a model without any interaction, the modal has an adjusted $R^2$ of 84% and shows a increase of 1.8mpg when driving a manual car
+The report reviews 5 different models and selects a model without any interaction, the modal has an adjusted $R^2$ of 84% and shows a increase of 1.8mpg when driving a manual car, however this result does not appear to be significant at the 95% confidence level.
 This document has been compiled as a PDF using Knitr and  \LaTeX. The source code can be found on github [here](https://github.com/JonnoB/Data-Science-Regression)
 
 #Introduction
@@ -165,17 +165,19 @@ The above table of the diagnostics of the `r nrow(mod.inf)` modals generated, ha
 - adj.r.squares: The adjusted $R^2$ of the model
 - coeff: the number of coefficients included in the modal
 
-Reviewing the modals, mod2 can be rejected as it is essentially the same as the two means that were explored at the beginning of this document. Although the Mod1 varients have extremly high $R^2$ values due to the interaction terms, these interaction terms make interpreting the model more difficult. To add to this although the modals overall have a very high $R^2$ the $R^2$ of the actual coefficients are often very low adding to the confusion of interpreting the results.
-It is possible to do a montecarlo analysis on the Automatic/Manual variable but this needs to be carefullt controlled otherwise unrealistic results can be obtained (see appendix for an example)
+Reviewing the modals, mod2 can be rejected as it is essentially the same as the two means that were explored at the beginning of this document. Although the Mod1 varients have extremly high $R^2$ values due to the interaction terms, these interaction terms make interpreting the model more difficult. 
+where there are interaction ters it is possible to do a montecarlo analysis on the Automatic/Manual variable but this needs to be carefullt controlled otherwise unrealistic results can be obtained (see appendix for an example)
 Due to these considerations the Modal "mod0step" was chosen to be used in the final evaluation.
 
 ##Results
 
 ```{r, results='asis'}
-print(xtable(as.data.frame(mod0step$coefficients)), type= pub.type)
+print(xtable(as.data.frame(summary(mod0step)$coefficients)), type= pub.type)
 ```
+A plot of the residuals (see appendix) shows that the residuals are reasonaby normally distributed.
+
 #Conclusions
-In conclusion it appears that in 1974 manual cars were `r mod0step$coefficients["am1"]` mpg more fuel efficient than automatic cars when controlling for cylinders, horsepower and car weight. Futher work could explore how interaction plays a part in the fuel efficiency of a car. Although not shown in this report controlling for rear axel ratio (drat) appeared to reverse the sign on the fuel efficiency of the car, this is definately worth investigating further
+In conclusion it appears that in 1974 manual cars were `r mod0step$coefficients["am1"]` mpg more fuel efficient than automatic cars when controlling for cylinders, horsepower and car weight. However when controlling for these variables the p value of the "am" variable is not significant at the 0.95 confidence level meaning ***there doesn't seem to be a significant difference between the two car types***. Clearly there appears to be significant interaction between variables exploring this further could provide more difintive/nuanced results, an example is that although not shown in this report controlling for rear axel ratio (drat) appeared to reverse the sign on the fuel efficiency of the car, this is definately worth investigating further
 
 \newpage
 
@@ -199,5 +201,15 @@ ggplot(mtcars, aes(x = (mpg), fill = factor(am), group = am) )+geom_density(alph
 data2 <- as.data.frame(lapply(data, sample, 10000, replace = TRUE))
 pred <- predict(mod1step, data2)
 plot(density(pred), main = "Results of monte carlo analysis\n of mod1step with 10K repititions", xlab = "mpg\n Values are clearly not realistic")
+```
+
+
+```{r}
+par(mfrow= c(1,2))
+plot(data$mpg,resid(mod0step), main = "residual plot of the fitted model", xlab="mpg", ylab="Modal Residuals")
+abline(0, 0)
+
+qqnorm(resid(mod0step))
+qqline(resid(mod0step))
 ```
 
